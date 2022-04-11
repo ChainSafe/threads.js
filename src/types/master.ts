@@ -99,6 +99,9 @@ export interface ThreadsWorkerOptions extends WorkerOptions {
 
   /** Whether to suppress auto-transpilation of typescript or not */
   suppressTranspileTS?: boolean
+
+  /** Whether to suppress resolving the script path */
+  suppressResolveScript?: boolean
 }
 
 /** Worker implementation. Either web worker or a node.js Worker class. */

@@ -106,7 +106,7 @@ function initWorkerThreadsWorker(): ImplementationExport {
     constructor(scriptPath: string, options?: ThreadsWorkerOptions & { fromSource: boolean }) {
       const resolvedScriptPath = options && options.fromSource
         ? null
-        : resolveScriptPath(scriptPath, (options || {})._baseURL)
+        : options?.suppressResolveScript ? scriptPath : resolveScriptPath(scriptPath, (options || {})._baseURL)
 
       if (!resolvedScriptPath) {
         // `options.fromSource` is true
