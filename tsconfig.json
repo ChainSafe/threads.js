@@ -9,7 +9,8 @@
     "moduleResolution": "node",
     "lib": ["es2015"],
     "outDir": "dist",
-    "strict": true
+    "strict": true,
+    "useUnknownInCatchVariables": false
   },
   "include": [
     "./src/index.ts",
