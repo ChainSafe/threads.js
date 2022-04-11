@@ -112,7 +112,7 @@ function initWorkerThreadsWorker(): ImplementationExport {
         // `options.fromSource` is true
         const sourceCode = scriptPath
         super(sourceCode, { ...options, eval: true })
-      } else if (resolvedScriptPath.match(/\.tsx?$/i) && detectTsNode()) {
+      } else if (resolvedScriptPath.match(/\.tsx?$/i) && !options?.suppressTranspileTS && detectTsNode()) {
         super(createTsNodeModule(resolvedScriptPath), { ...options, eval: true })
       } else if (resolvedScriptPath.match(/\.asar[\/\\]/)) {
         // See <https://github.com/andywer/threads-plugin/issues/17>

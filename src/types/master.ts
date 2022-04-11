@@ -96,6 +96,9 @@ export interface ThreadsWorkerOptions extends WorkerOptions {
 
   /** Whether to apply CORS protection workaround. Defaults to true. */
   CORSWorkaround?: boolean
+
+  /** Whether to suppress auto-transpilation of typescript or not */
+  suppressTranspileTS?: boolean
 }
 
 /** Worker implementation. Either web worker or a node.js Worker class. */
