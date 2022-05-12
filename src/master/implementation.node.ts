@@ -79,17 +79,20 @@ function rebaseScriptPath(scriptPath: string, ignoreRegex: RegExp) {
   return rebasedScriptPath
 }
 
-function resolveScriptPath(scriptPath: string, baseURL?: string | undefined) {
+function resolveScriptPath(scriptPath: string, baseURL?: string | undefined): string {
   const makeRelative = (filePath: string) => {
     // eval() hack is also webpack-related
     return path.isAbsolute(filePath) ? filePath : path.join(baseURL || eval("__dirname"), filePath)
   }
 
-  const workerFilePath = typeof __non_webpack_require__ === "function"
-    ? __non_webpack_require__.resolve(makeRelative(scriptPath))
-    : eval("require").resolve(makeRelative(rebaseScriptPath(scriptPath, /[\/\\]worker_threads[\/\\]/)))
-
-  return workerFilePath
+  try {
+    const workerFilePath = typeof __non_webpack_require__ === "function"
+      ? __non_webpack_require__.resolve(makeRelative(scriptPath))
+      : eval("require").resolve(makeRelative(rebaseScriptPath(scriptPath, /[\/\\]worker_threads[\/\\]/)))
+    return workerFilePath
+  } catch(e) {
+    return makeRelative(rebaseScriptPath(scriptPath, /[\/\\]worker_threads[\/\\]/))
+  }
 }
 
 function initWorkerThreadsWorker(): ImplementationExport {
