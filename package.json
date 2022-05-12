@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/threads",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Web workers & worker threads as simple as a function call",
   "license": "MIT",
   "main": "dist/index.js",
