@@ -142,19 +142,6 @@ function initWorkerThreadsWorker(): ImplementationExport {
     }
   }
 
-  const terminateWorkersAndMaster = () => {
-    // we should terminate all workers and then gracefully shutdown self process
-    Promise.all(allWorkers.map(worker => worker.terminate())).then(
-      () => process.exit(0),
-      () => process.exit(1),
-    )
-    allWorkers = []
-  }
-
-  // Take care to not leave orphaned processes behind. See #147.
-  process.on("SIGINT", () => terminateWorkersAndMaster())
-  process.on("SIGTERM", () => terminateWorkersAndMaster())
-
   class BlobWorker extends Worker {
     constructor(blob: Uint8Array, options?: ThreadsWorkerOptions) {
       super(Buffer.from(blob).toString("utf-8"), { ...options, fromSource: true })
@@ -221,20 +208,6 @@ function initTinyWorker(): ImplementationExport {
       return super.terminate()
     }
   }
-
-  const terminateWorkersAndMaster = () => {
-    // we should terminate all workers and then gracefully shutdown self process
-    Promise.all(allWorkers.map(worker => worker.terminate())).then(
-      () => process.exit(0),
-      () => process.exit(1),
-    )
-    allWorkers = []
-  }
-
-  // Take care to not leave orphaned processes behind
-  // See <https://github.com/avoidwork/tiny-worker#faq>
-  process.on("SIGINT", () => terminateWorkersAndMaster())
-  process.on("SIGTERM", () => terminateWorkersAndMaster())
 
   class BlobWorker extends Worker {
     constructor(blob: Uint8Array, options?: ThreadsWorkerOptions) {
