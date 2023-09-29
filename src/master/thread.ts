@@ -1,5 +1,5 @@
 import { Observable } from "observable-fns"
-import { $errors, $events, $terminate } from "../symbols"
+import { $errors, $events, $terminate, $worker } from "../symbols"
 import { Thread as ThreadType, WorkerEvent } from "../types/master"
 
 function fail(message: string): never {
@@ -21,5 +21,9 @@ export const Thread = {
   /** Terminate a thread. Remember to terminate every thread when you are done using it. */
   terminate<ThreadT extends ThreadType>(thread: ThreadT) {
     return thread[$terminate]()
+  },
+  /** Returns the underlying worker object for the thread */
+  worker<ThreadT extends ThreadType>(thread: ThreadT) {
+    return thread[$worker]
   }
 }
