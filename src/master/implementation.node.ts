@@ -127,7 +127,7 @@ function initWorkerThreadsWorker(): ImplementationExport {
       // Worker event emitter can have more than 10 listeners during normal operation
       // Increase max listeners to prevent MaxListenersExceededWarning
       // See https://github.com/ChainSafe/lodestar/issues/5552
-      this.setMaxListeners(100)
+      this.setMaxListeners(1000)
 
       this.mappedEventListeners = new WeakMap()
       allWorkers.push(this)
