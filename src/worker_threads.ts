@@ -10,6 +10,7 @@ interface WorkerThreadsModule {
   MessagePort: typeof MessagePort
   isMainThread: boolean
   parentPort: MessagePort
+  receiveMessageOnPort: (port: MessagePort) => { message: any } | undefined
 }
 
 let implementation: WorkerThreadsModule | undefined

@@ -3,7 +3,7 @@ import type { BlobWorker as BlobWorkerClass } from "../types/master"
 import { Worker as WorkerType } from "../types/master"
 import { getWorkerImplementation, isWorkerRuntime } from "./implementation"
 
-export { FunctionThread, ModuleThread } from "../types/master"
+export { AtomicsMode, FunctionThread, ModuleThread, SpawnOptions } from "../types/master"
 export { Pool } from "./pool"
 export { spawn } from "./spawn"
 export { Thread } from "./thread"

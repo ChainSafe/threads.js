@@ -1,5 +1,6 @@
 export const $errors = Symbol("thread.errors")
 export const $events = Symbol("thread.events")
+export const $sharedBuffer = Symbol("thread.sharedBuffer")
 export const $terminate = Symbol("thread.terminate")
 export const $transferable = Symbol("thread.transferable")
 export const $worker = Symbol("thread.worker")

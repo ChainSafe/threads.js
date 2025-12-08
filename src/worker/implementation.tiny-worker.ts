@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 // tslint:disable no-shadowed-variable
 
+import type { AtomicsMode } from "../atomics"
 import { AbstractedWorkerAPI } from "../types/worker"
 
 interface WorkerGlobalScope {
@@ -41,6 +42,13 @@ const subscribeToMasterMessages: AbstractedWorkerAPI["subscribeToMasterMessages"
 
   const unsubscribe = () => messageHandlers.delete(onMessage)
   return unsubscribe
+}
+
+/**
+ * No-op for tiny-worker - atomics/SharedArrayBuffer not supported
+ */
+export function initializeAtomics(_buffer: Int32Array, _mode: AtomicsMode): void {
+  // No-op for tiny-worker implementation
 }
 
 export default {

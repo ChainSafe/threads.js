@@ -1,3 +1,5 @@
+import type { AtomicsMode } from "../atomics"
+
 export interface SerializedError {
   __error_marker: "$$error"
   message: string
@@ -9,8 +11,15 @@ export interface SerializedError {
 // Messages sent by master:
 
 export enum MasterMessageType {
+  atomicsInit = "atomicsInit",
   cancel = "cancel",
   run = "run"
+}
+
+export type MasterAtomicsInitMessage = {
+  type: MasterMessageType.atomicsInit,
+  sharedBuffer: Int32Array,
+  atomicsMode: AtomicsMode
 }
 
 export type MasterJobCancelMessage = {
@@ -25,7 +34,7 @@ export type MasterJobRunMessage = {
   args: any[]
 }
 
-export type MasterSentMessage = MasterJobCancelMessage | MasterJobRunMessage
+export type MasterSentMessage = MasterAtomicsInitMessage | MasterJobCancelMessage | MasterJobRunMessage
 
 ////////////////////////////
 // Messages sent by worker:

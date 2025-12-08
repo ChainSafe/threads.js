@@ -1,12 +1,14 @@
 import DebugLogger from "debug"
 import { Observable } from "observable-fns"
+import { createSharedBuffer, AtomicsMode } from "../atomics"
 import { deserialize } from "../common"
 import { createPromiseWithResolver } from "../promise"
-import { $errors, $events, $terminate, $worker } from "../symbols"
+import { $errors, $events, $sharedBuffer, $terminate, $worker } from "../symbols"
 import {
   FunctionThread,
   ModuleThread,
   PrivateThreadProps,
+  SpawnOptions,
   StripAsync,
   Worker as WorkerType,
   WorkerEvent,
@@ -15,7 +17,12 @@ import {
   WorkerMessageEvent,
   WorkerTerminationEvent
 } from "../types/master"
-import { WorkerInitMessage, WorkerUncaughtErrorMessage } from "../types/messages"
+import {
+  MasterAtomicsInitMessage,
+  MasterMessageType,
+  WorkerInitMessage,
+  WorkerUncaughtErrorMessage
+} from "../types/messages"
 import { WorkerFunction, WorkerModule } from "../types/worker"
 import { createProxyFunction, createProxyModule } from "./invocation-proxy"
 
@@ -117,7 +124,13 @@ function createTerminator(worker: WorkerType): { termination: Promise<void>, ter
   return { terminate, termination }
 }
 
-function setPrivateThreadProps<T>(raw: T, worker: WorkerType, workerEvents: Observable<WorkerEvent>, terminate: () => Promise<void>): T & PrivateThreadProps {
+function setPrivateThreadProps<T>(
+  raw: T,
+  worker: WorkerType,
+  workerEvents: Observable<WorkerEvent>,
+  terminate: () => Promise<void>,
+  sharedBuffer: Int32Array | null
+): T & PrivateThreadProps {
   const workerErrors = workerEvents
     .filter(event => event.type === WorkerEventType.internalError)
     .map(errorEvent => (errorEvent as WorkerInternalErrorEvent).error)
@@ -126,9 +139,23 @@ function setPrivateThreadProps<T>(raw: T, worker: WorkerType, workerEvents: Obse
   return Object.assign(raw, {
     [$errors]: workerErrors,
     [$events]: workerEvents,
+    [$sharedBuffer]: sharedBuffer,
     [$terminate]: terminate,
     [$worker]: worker
   })
+}
+
+/**
+ * Send atomics initialization message to worker.
+ */
+function sendAtomicsInit(worker: WorkerType, sharedBuffer: Int32Array, atomicsMode: AtomicsMode): void {
+  const initMessage: MasterAtomicsInitMessage = {
+    type: MasterMessageType.atomicsInit,
+    sharedBuffer,
+    atomicsMode
+  }
+  worker.postMessage(initMessage)
+  debugSpawn("Sent atomics init message to worker, mode:", atomicsMode)
 }
 
 /**
@@ -139,14 +166,28 @@ function setPrivateThreadProps<T>(raw: T, worker: WorkerType, workerEvents: Obse
  * @param worker Instance of `Worker`. Either a web worker, `worker_threads` worker or `tiny-worker` worker.
  * @param [options]
  * @param [options.timeout] Init message timeout. Default: 10000 or set by environment variable.
+ * @param [options.atomics] Atomics mode for worker synchronization. Node.js only.
  */
 export async function spawn<Exposed extends WorkerFunction | WorkerModule<any> = ArbitraryWorkerInterface>(
   worker: WorkerType,
-  options?: { timeout?: number }
+  options?: SpawnOptions
 ): Promise<ExposedToThreadType<Exposed>> {
   debugSpawn("Initializing new thread")
 
   const timeout = options && options.timeout ? options.timeout : initMessageTimeout
+  const atomicsMode: AtomicsMode = options?.atomics ?? "disabled"
+
+  // Create shared buffer for atomics synchronization (Node.js only)
+  let sharedBuffer: Int32Array | null = null
+  if (atomicsMode !== "disabled") {
+    sharedBuffer = createSharedBuffer()
+    if (sharedBuffer) {
+      sendAtomicsInit(worker, sharedBuffer, atomicsMode)
+    } else {
+      debugSpawn("SharedArrayBuffer not available, falling back to event-based messaging")
+    }
+  }
+
   const initMessage = await withTimeout(receiveInitMessage(worker), timeout, `Timeout: Did not receive an init message from worker after ${timeout}ms. Make sure the worker calls expose().`)
   const exposed = initMessage.exposed
 
@@ -154,11 +195,11 @@ export async function spawn<Exposed extends WorkerFunction | WorkerModule<any> =
   const events = createEventObservable(worker, termination)
 
   if (exposed.type === "function") {
-    const proxy = createProxyFunction(worker)
-    return setPrivateThreadProps(proxy, worker, events, terminate) as ExposedToThreadType<Exposed>
+    const proxy = createProxyFunction(worker, undefined, sharedBuffer)
+    return setPrivateThreadProps(proxy, worker, events, terminate, sharedBuffer) as ExposedToThreadType<Exposed>
   } else if (exposed.type === "module") {
-    const proxy = createProxyModule(worker, exposed.methods)
-    return setPrivateThreadProps(proxy, worker, events, terminate) as ExposedToThreadType<Exposed>
+    const proxy = createProxyModule(worker, exposed.methods, sharedBuffer)
+    return setPrivateThreadProps(proxy, worker, events, terminate, sharedBuffer) as ExposedToThreadType<Exposed>
   } else {
     const type = (exposed as WorkerInitMessage["exposed"]).type
     throw Error(`Worker init message states unexpected type of expose(): ${type}`)

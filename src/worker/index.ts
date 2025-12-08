@@ -3,6 +3,7 @@ import { Observable, Subscription } from "observable-fns"
 import { deserialize, serialize } from "../common"
 import { isTransferDescriptor, TransferDescriptor } from "../transferable"
 import {
+  MasterAtomicsInitMessage,
   MasterJobCancelMessage,
   MasterJobRunMessage,
   MasterMessageType,
@@ -15,7 +16,7 @@ import {
   WorkerUncaughtErrorMessage
 } from "../types/messages"
 import { WorkerFunction, WorkerModule } from "../types/worker"
-import Implementation from "./implementation"
+import Implementation, { initializeAtomics } from "./implementation"
 
 export { registerSerializer } from "../common"
 export { Transfer } from "../transferable"
@@ -27,6 +28,7 @@ let exposeCalled = false
 
 const activeSubscriptions = new Map<number, Subscription<any>>()
 
+const isMasterAtomicsInitMessage = (thing: any): thing is MasterAtomicsInitMessage => thing && thing.type === MasterMessageType.atomicsInit
 const isMasterJobCancelMessage = (thing: any): thing is MasterJobCancelMessage => thing && thing.type === MasterMessageType.cancel
 const isMasterJobRunMessage = (thing: any): thing is MasterJobRunMessage => thing && thing.type === MasterMessageType.run
 
@@ -222,6 +224,16 @@ if (typeof process !== "undefined" && typeof process.on === "function" && Implem
     if (error && typeof (error as any).message === "string") {
       // Post with some delay, so the master had some time to subscribe to messages
       setTimeout(() => postUncaughtErrorMessage(error as any), 250)
+    }
+  })
+}
+
+// Subscribe to atomics init message early, before expose() is called
+// This allows the master to send the SharedArrayBuffer before other messages
+if (Implementation.isWorkerRuntime()) {
+  Implementation.subscribeToMasterMessages(messageData => {
+    if (isMasterAtomicsInitMessage(messageData)) {
+      initializeAtomics(messageData.sharedBuffer, messageData.atomicsMode)
     }
   })
 }

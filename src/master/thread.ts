@@ -1,5 +1,5 @@
 import { Observable } from "observable-fns"
-import { $errors, $events, $terminate, $worker } from "../symbols"
+import { $errors, $events, $sharedBuffer, $terminate, $worker } from "../symbols"
 import { Thread as ThreadType, WorkerEvent } from "../types/master"
 
 function fail(message: string): never {
@@ -25,5 +25,9 @@ export const Thread = {
   /** Returns the underlying worker object for the thread */
   worker<ThreadT extends ThreadType>(thread: ThreadT) {
     return thread[$worker]
+  },
+  /** Returns the shared buffer for atomics synchronization, or null if not using atomics */
+  sharedBuffer<ThreadT extends ThreadType>(thread: ThreadT): Int32Array | null {
+    return thread[$sharedBuffer]
   }
 }

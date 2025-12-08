@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 // tslint:disable no-shadowed-variable
 
+import type { AtomicsMode } from "../atomics"
 import { AbstractedWorkerAPI } from "../types/worker"
 
 interface WorkerGlobalScope {
@@ -29,6 +30,13 @@ const subscribeToMasterMessages: AbstractedWorkerAPI["subscribeToMasterMessages"
   }
   self.addEventListener("message", messageHandler as EventListener)
   return unsubscribe
+}
+
+/**
+ * No-op for browser - atomics not supported in web workers without cross-origin isolation
+ */
+export function initializeAtomics(_buffer: Int32Array, _mode: AtomicsMode): void {
+  // No-op for browser implementation
 }
 
 export default {

@@ -7,6 +7,7 @@
 
 import DebugLogger from "debug"
 import { multicast, Observable } from "observable-fns"
+import { notifyWorker } from "../atomics"
 import { deserialize, serialize } from "../common"
 import { ObservablePromise } from "../observable-promise"
 import { isTransferDescriptor } from "../transferable"
@@ -115,7 +116,11 @@ function prepareArguments(rawArgs: any[]): { args: any[], transferables: Transfe
   }
 }
 
-export function createProxyFunction<Args extends any[], ReturnType>(worker: WorkerType, method?: string) {
+export function createProxyFunction<Args extends any[], ReturnType>(
+  worker: WorkerType,
+  method?: string,
+  sharedBuffer?: Int32Array | null
+) {
   return ((...rawArgs: Args) => {
     const uid = nextJobUID++
     const { args, transferables } = prepareArguments(rawArgs)
@@ -130,6 +135,11 @@ export function createProxyFunction<Args extends any[], ReturnType>(worker: Work
 
     try {
       worker.postMessage(runMessage, transferables)
+
+      // Signal worker via atomics for faster wake-up
+      if (sharedBuffer) {
+        notifyWorker(sharedBuffer)
+      }
     } catch (error) {
       return ObservablePromise.from(Promise.reject(error))
     }
@@ -140,12 +150,13 @@ export function createProxyFunction<Args extends any[], ReturnType>(worker: Work
 
 export function createProxyModule<Methods extends ModuleMethods>(
   worker: WorkerType,
-  methodNames: string[]
+  methodNames: string[],
+  sharedBuffer?: Int32Array | null
 ): ModuleProxy<Methods> {
   const proxy: any = {}
 
   for (const methodName of methodNames) {
-    proxy[methodName] = createProxyFunction(worker, methodName)
+    proxy[methodName] = createProxyFunction(worker, methodName, sharedBuffer)
   }
 
   return proxy

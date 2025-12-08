@@ -4,9 +4,12 @@
 // Cannot use `compilerOptions.esModuleInterop` and default import syntax
 // See <https://github.com/microsoft/TypeScript/issues/28009>
 import { Observable } from "observable-fns"
+import { AtomicsMode } from "../atomics"
 import { ObservablePromise } from "../observable-promise"
-import { $errors, $events, $terminate, $worker } from "../symbols"
+import { $errors, $events, $sharedBuffer, $terminate, $worker } from "../symbols"
 import { TransferDescriptor } from "../transferable"
+
+export { AtomicsMode }
 
 interface ObservableLikeSubscription {
   unsubscribe(): any
@@ -50,8 +53,23 @@ export type ModuleProxy<Methods extends ModuleMethods> = {
 export interface PrivateThreadProps {
   [$errors]: Observable<Error>
   [$events]: Observable<WorkerEvent>
+  [$sharedBuffer]: Int32Array | null
   [$terminate]: () => Promise<void>
   [$worker]: Worker
+}
+
+/** Options for spawn() */
+export interface SpawnOptions {
+  /** Init message timeout in milliseconds. Default: 10000 or THREADS_WORKER_INIT_TIMEOUT env var. */
+  timeout?: number
+  /**
+   * Atomics mode for worker synchronization. Node.js only.
+   * - "sync": Use Atomics.wait (blocks worker thread, most efficient)
+   * - "async": Use Atomics.waitAsync (non-blocking, good for mixed workloads)
+   * - "disabled": Use traditional event-based messaging
+   * Default: "disabled" for backward compatibility
+   */
+  atomics?: AtomicsMode
 }
 
 export type FunctionThread<Args extends any[] = any[], ReturnType = any> = ProxyableFunction<Args, ReturnType> & PrivateThreadProps
