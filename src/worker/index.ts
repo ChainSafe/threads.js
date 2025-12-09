@@ -230,10 +230,20 @@ if (typeof process !== "undefined" && typeof process.on === "function" && Implem
 
 // Subscribe to atomics init message early, before expose() is called
 // This allows the master to send the SharedArrayBuffer before other messages
+// IMPORTANT: We must unsubscribe after receiving the atomics init message to avoid
+// a race condition where this event-based handler consumes job messages meant for
+// the atomics loop (which uses receiveMessageOnPort).
 if (Implementation.isWorkerRuntime()) {
-  Implementation.subscribeToMasterMessages(messageData => {
+  let atomicsInitUnsubscribe: (() => void) | null = null
+  atomicsInitUnsubscribe = Implementation.subscribeToMasterMessages(messageData => {
     if (isMasterAtomicsInitMessage(messageData)) {
       initializeAtomics(messageData.sharedBuffer, messageData.atomicsMode)
+      // Unsubscribe immediately after initialization to prevent this event-based
+      // handler from stealing messages from the atomics loop
+      if (atomicsInitUnsubscribe) {
+        atomicsInitUnsubscribe()
+        atomicsInitUnsubscribe = null
+      }
     }
   })
 }
